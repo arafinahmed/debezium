@@ -61,8 +61,60 @@ Refer to the `job.yaml` file in the Debezium chart for the job configuration. It
 
 Alternatively, you can manually register a connector by sending a POST request to the Debezium REST API. You can use a tool like `curl` to do this. Here’s an example of how to manually register a connector:
 
-`kubectl exec -it kafka-connect-76d84f95f5-bgz7z -- curl -X POST -H "Content-Type: application/json" --data '{"name": "connector-name", "config": {"connector.class": "io.debezium.connector.postgresql.PostgresConnector", "tasks.max": "1", "database.hostname": "postgres-host", "database.port": "5432", "database.user": "postgres-user", "database.password": "postgres-password", "database.dbname": "postgres-db", "database.server.name": "postgres-db-server", "table.include.list": "public.table-name", "plugin.name": "pgoutput", "slot.name": "debezium_table_slot", "publication.name": "debezium_table_pub", "topic.prefix": "deb-pg-postgres"}}' http://localhost:8083/connectors`
+```bash
+kubectl exec -it <kafka-connect-pod-name> -- curl -X POST -H "Content-Type: application/json" --data '{
+  "name": "connector-name",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "postgres-host",
+    "database.port": "5432",
+    "database.user": "postgres-user",
+    "database.password": "postgres-password",
+    "database.dbname": "postgres-db",
+    "database.server.name": "postgres-db-server",
+    "table.include.list": "public.table-name",
+    "plugin.name": "pgoutput",
+    "slot.name": "debezium_table_slot",
+    "publication.name": "debezium_table_pub",
+    "topic.prefix": "deb-pg-postgres"
+  }
+}' http://localhost:8083/connectors
+```
+## Communicating with Kafka
 
+To communicate with Kafka, you need to ensure that your Kafka cluster is running and accessible. You can use the `kafkajs` library to interact with Kafka from your Node.js application.
+
+### SASL Authentication
+
+If your Kafka setup requires SASL (Simple Authentication and Security Layer) authentication, you need to configure the following parameters in your Kafka client:
+
+- **`username`**: The username for authenticating with the Kafka broker.
+- **`password`**: The password associated with the username.
+- **`mechanism`**: The SASL mechanism to use, such as "PLAIN" or "SCRAM-SHA-256".
+
+Here’s an example of how to configure SASL in your Kafka client:
+
+```typescript
+const kafka = new Kafka({
+  clientId: 'client-service',
+  brokers: ['kafka:9092'],
+  sasl: {
+    username: 'kafka_user', // Replace with your Kafka username
+    password: 'kafka_password', // Replace with your Kafka password
+    mechanism: 'PLAIN' as 'plain', // Use the appropriate mechanism
+  },
+  ssl: false, // Set to true if using SSL
+});
+```
+
+### Listening to a Topic
+
+To listen to a specific topic in Kafka, you can use a consumer that subscribes to the desired topic. The consumer will receive messages published to that topic and can process them accordingly.
+
+Make sure to follow the naming convention for your topics, which typically follows the format `{database.server.name}.public.table-name` for Debezium topics.
+
+For more detailed implementation instructions, refer to the documentation of the `kafkajs` library or the specific consumer implementation in your application.
 
 ## Conclusion
 
