@@ -1,4 +1,4 @@
-# Debezium Chart README
+# Debezium Chart | Connecting to a SASL-Enabled Kafka Cluster
 
 ## Overview
 
