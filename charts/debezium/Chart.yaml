@@ -1,0 +1,9 @@
+apiVersion: v2
+name: debezium
+description: Debezium
+
+type: application
+
+version: 1.0.0
+
+appVersion: v3.0.0

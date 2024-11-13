@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-connect-config
+  labels:
+    {{- include "debezium.labels.connect" . | nindent 4 }}
+data:
+  medicine-connector.json: |
+    {{ .Values.debezium.connector.config | toJson | nindent 4 }}

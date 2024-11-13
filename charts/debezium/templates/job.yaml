@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-connect-init
+  labels:
+    {{- include "debezium.labels.connect" . | nindent 4 }}
+spec:
+  backoffLimit: {{ .Values.debezium.job.backoffLimit | default 10 }}
+  template:
+    spec:
+      containers:
+      - name: connector-init
+        image: {{ .Values.debezium.job.image | quote }}
+        command:
+        - /bin/sh
+        - -c
+        - |
+          until curl -s http://{{ include "debezium.fullname" . }}-connect:8083/connectors > /dev/null; do
+            echo "Waiting for Kafka Connect to be ready..."
+            sleep {{ .Values.debezium.job.pollInterval | default 60 }}
+          done
+
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            --data @/kafka-connect/medicine-connector.json \
+            http://{{ include "debezium.fullname" . }}-connect:8083/connectors
+
+        volumeMounts:
+        - name: config-volume
+          mountPath: /kafka-connect
+      volumes:
+      - name: config-volume
+        configMap:
+          name: {{ .Release.Name }}-connect-config
+      restartPolicy: {{ .Values.debezium.job.restartPolicy | default "OnFailure" }}

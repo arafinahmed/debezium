@@ -1,0 +1,79 @@
+debezium:
+  nameOverride: ""
+  fullnameOverride: ""
+
+  connect:
+    replicaCount: 1
+    imagePullSecrets: [ ]
+
+    image:
+      repository: debezium/connect
+      pullPolicy: Always
+      tag: "3.0.0.Final"
+
+    service:
+      type: ClusterIP
+      port: 8083
+      protocol: TCP
+      name: http
+
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+    env:
+      - name: BOOTSTRAP_SERVERS
+        value: "kafka:9092"
+      - name: CONNECT_SASL_MECHANISM
+        value: "PLAIN"
+      - name: CONNECT_SECURITY_PROTOCOL
+        value: "SASL_PLAINTEXT"
+      - name: CONNECT_SASL_JAAS_CONFIG
+        value: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"kafka_user\" password=\"kafka_password\";"
+      - name: CONNECT_PRODUCER_SASL_MECHANISM
+        value: "PLAIN"
+      - name: CONNECT_PRODUCER_SECURITY_PROTOCOL
+        value: "SASL_PLAINTEXT"
+      - name: CONNECT_PRODUCER_SASL_JAAS_CONFIG
+        value: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"kafka_user\" password=\"kafka_password\";"
+      - name: CONNECT_CONSUMER_SASL_MECHANISM
+        value: "PLAIN"
+      - name: CONNECT_CONSUMER_SECURITY_PROTOCOL
+        value: "SASL_PLAINTEXT"
+      - name: CONNECT_CONSUMER_SASL_JAAS_CONFIG
+        value: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"kafka_user\" password=\"kafka_password\";"
+      - name: GROUP_ID
+        value: "1"
+      - name: CONFIG_STORAGE_TOPIC
+        value: "connect-configs"
+      - name: OFFSET_STORAGE_TOPIC
+        value: "connect-offsets"
+      - name: STATUS_STORAGE_TOPIC
+        value: "connect-status"
+
+  connector:
+    config:
+      name: "medicine-connector-test"
+      config:
+        connector.class: "io.debezium.connector.postgresql.PostgresConnector"
+        database.hostname: "postgres-host"
+        database.port: "5432"
+        database.user: "postgres-user"
+        database.password: "postgres-password"
+        database.dbname: "postgres-db"
+        database.server.name: "postgres-server"
+        table.include.list: "public.table-name"
+        plugin.name: "pgoutput"
+        topic.prefix: "postgres-topic"
+        sasl.mechanism: "PLAIN"
+        security.protocol: "SASL_PLAINTEXT"
+        sasl.jaas.config: 'org.apache.kafka.common.security.plain.PlainLoginModule required username="kafka_user" password="kafka_password";'
+  job:
+    image: "curlimages/curl:latest"
+    backoffLimit: 10
+    pollInterval: 60
+    restartPolicy: "OnFailure"
