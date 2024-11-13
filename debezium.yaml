@@ -1,0 +1,164 @@
+---
+# Source: debezium/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: debeaium-connect-config
+  labels:
+    helm.sh/chart: debezium-1.0.0
+    app.kubernetes.io/name: debezium
+    app.kubernetes.io/instance: debeaium
+    app.kubernetes.io/app: connect
+    app.kubernetes.io/version: "v3.0.0"
+    app.kubernetes.io/managed-by: Helm
+data:
+  connector.json: |
+    
+    {"config":{"connector.class":"io.debezium.connector.postgresql.PostgresConnector","database.dbname":"postgres-db","database.hostname":"postgres-host","database.password":"postgres-password","database.port":"5432","database.server.name":"postgres-server","database.user":"postgres-user","plugin.name":"pgoutput","sasl.jaas.config":"org.apache.kafka.common.security.plain.PlainLoginModule required username=\"kafka_user\" password=\"kafka_password\";","sasl.mechanism":"PLAIN","security.protocol":"SASL_PLAINTEXT","table.include.list":"public.table-name","topic.prefix":"postgres-topic"},"name":"connector-test"}
+---
+# Source: debezium/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: debeaium-connect
+  labels:
+    helm.sh/chart: debezium-1.0.0
+    app.kubernetes.io/name: debezium
+    app.kubernetes.io/instance: debeaium
+    app.kubernetes.io/app: connect
+    app.kubernetes.io/version: "v3.0.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8083
+      targetPort: 8083
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: debezium
+    app.kubernetes.io/instance: debeaium
+    app.kubernetes.io/app: connect
+---
+# Source: debezium/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debeaium-connect
+  labels:
+    helm.sh/chart: debezium-1.0.0
+    app.kubernetes.io/name: debezium
+    app.kubernetes.io/instance: debeaium
+    app.kubernetes.io/app: connect
+    app.kubernetes.io/version: "v3.0.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: debezium
+      app.kubernetes.io/instance: debeaium
+      app.kubernetes.io/app: connect
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: debezium
+        app.kubernetes.io/instance: debeaium
+        app.kubernetes.io/app: connect
+    spec:
+      containers:
+        - name: debezium-connect
+          image: "debezium/connect:3.0.0.Final"
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8083
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          env:
+            - name: BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: CONNECT_SASL_MECHANISM
+              value: PLAIN
+            - name: CONNECT_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: CONNECT_SASL_JAAS_CONFIG
+              value: org.apache.kafka.common.security.plain.PlainLoginModule required username="kafka_user"
+                password="kafka_password";
+            - name: CONNECT_PRODUCER_SASL_MECHANISM
+              value: PLAIN
+            - name: CONNECT_PRODUCER_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: CONNECT_PRODUCER_SASL_JAAS_CONFIG
+              value: org.apache.kafka.common.security.plain.PlainLoginModule required username="kafka_user"
+                password="kafka_password";
+            - name: CONNECT_CONSUMER_SASL_MECHANISM
+              value: PLAIN
+            - name: CONNECT_CONSUMER_SECURITY_PROTOCOL
+              value: SASL_PLAINTEXT
+            - name: CONNECT_CONSUMER_SASL_JAAS_CONFIG
+              value: org.apache.kafka.common.security.plain.PlainLoginModule required username="kafka_user"
+                password="kafka_password";
+            - name: GROUP_ID
+              value: "1"
+            - name: CONFIG_STORAGE_TOPIC
+              value: connect-configs
+            - name: OFFSET_STORAGE_TOPIC
+              value: connect-offsets
+            - name: STATUS_STORAGE_TOPIC
+              value: connect-status
+          volumeMounts:
+            - name: config-volume
+              mountPath: /kafka-connect
+      volumes:
+        - name: config-volume
+          configMap:
+            name: debeaium-connect-config
+---
+# Source: debezium/templates/job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: debeaium-connect-init
+  labels:
+    helm.sh/chart: debezium-1.0.0
+    app.kubernetes.io/name: debezium
+    app.kubernetes.io/instance: debeaium
+    app.kubernetes.io/app: connect
+    app.kubernetes.io/version: "v3.0.0"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  backoffLimit: 10
+  template:
+    spec:
+      containers:
+      - name: connector-init
+        image: "curlimages/curl:latest"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          until curl -s http://debeaium-connect:8083/connectors > /dev/null; do
+            echo "Waiting for Kafka Connect to be ready..."
+            sleep 60
+          done
+
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            --data @/kafka-connect/connector.json \
+            http://debeaium-connect:8083/connectors
+
+        volumeMounts:
+        - name: config-volume
+          mountPath: /kafka-connect
+      volumes:
+      - name: config-volume
+        configMap:
+          name: debeaium-connect-config
+      restartPolicy: OnFailure
