@@ -61,25 +61,7 @@ Refer to the `job.yaml` file in the Debezium chart for the job configuration. It
 
 Alternatively, you can manually register a connector by sending a POST request to the Debezium REST API. You can use a tool like `curl` to do this. Here’s an example of how to manually register a connector:
 
-`kubectl exec -it kafka-connect-76d84f95f5-bgz7z -- curl -X POST -H "Content-Type: application/json" --data '{
-      "name": "connector-name",
-      "config": {
-        "connector.class": "io.debezium.connector.postgresql.PostgresConnector", 
-        "tasks.max": "1",
-        "database.hostname": "postgres-host", 
-        "database.port": "5432",
-        "database.user": "postgres-user",  
-        "database.password": "postgres-password", 
-        "database.dbname": "postgres-db", 
-        "database.server.name": "postgres-db-server",
-        "table.include.list": "public.table-name",  
-        "plugin.name": "pgoutput",
-        "slot.name": "debezium_table_slot",  
-        "publication.name": "debezium_table_pub"
-        "topic.prefix": "deb-pg-postgres"
-        
-      }
-    }' http://localhost:8083/connectors`
+`kubectl exec -it kafka-connect-76d84f95f5-bgz7z -- curl -X POST -H "Content-Type: application/json" --data '{"name": "connector-name", "config": {"connector.class": "io.debezium.connector.postgresql.PostgresConnector", "tasks.max": "1", "database.hostname": "postgres-host", "database.port": "5432", "database.user": "postgres-user", "database.password": "postgres-password", "database.dbname": "postgres-db", "database.server.name": "postgres-db-server", "table.include.list": "public.table-name", "plugin.name": "pgoutput", "slot.name": "debezium_table_slot", "publication.name": "debezium_table_pub", "topic.prefix": "deb-pg-postgres"}}' http://localhost:8083/connectors`
 
 
 ## Conclusion
