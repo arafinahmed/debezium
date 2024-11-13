@@ -57,7 +57,7 @@ debezium:
 
   connector:
     config:
-      name: "medicine-connector-test"
+      name: "connector-test"
       config:
         connector.class: "io.debezium.connector.postgresql.PostgresConnector"
         database.hostname: "postgres-host"

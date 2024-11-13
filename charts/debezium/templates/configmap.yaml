@@ -5,5 +5,5 @@ metadata:
   labels:
     {{- include "debezium.labels.connect" . | nindent 4 }}
 data:
-  medicine-connector.json: |
+  connector.json: |
     {{ .Values.debezium.connector.config | toJson | nindent 4 }}

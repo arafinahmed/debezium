@@ -22,7 +22,7 @@ spec:
 
           curl -X POST \
             -H "Content-Type: application/json" \
-            --data @/kafka-connect/medicine-connector.json \
+            --data @/kafka-connect/connector.json \
             http://{{ include "debezium.fullname" . }}-connect:8083/connectors
 
         volumeMounts:
